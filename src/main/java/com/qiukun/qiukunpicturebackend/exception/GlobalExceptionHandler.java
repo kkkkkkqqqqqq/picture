@@ -5,6 +5,7 @@ import com.qiukun.qiukunpicturebackend.common.ResultUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 @Slf4j
@@ -20,6 +21,11 @@ public class GlobalExceptionHandler {
     public BaseResponse<?> runtimeExceptionHandler(RuntimeException e) {
         log.error("RuntimeException", e);
         return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统错误");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public BaseResponse<?> handleMaxSizeException(MaxUploadSizeExceededException e) {
+        return ResultUtils.error(ErrorCode.PARAMS_ERROR, "文件大小超出限制，请上传小于10MB的文件");
     }
 }
 
