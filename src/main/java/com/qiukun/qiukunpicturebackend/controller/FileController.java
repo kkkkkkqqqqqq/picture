@@ -1,5 +1,8 @@
 package com.qiukun.qiukunpicturebackend.controller;
 
+import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.COSObjectInputStream;
+import com.qcloud.cos.utils.IOUtils;
 import com.qiukun.qiukunpicturebackend.annotation.AuthCheck;
 import com.qiukun.qiukunpicturebackend.common.BaseResponse;
 import com.qiukun.qiukunpicturebackend.common.ResultUtils;
@@ -8,15 +11,19 @@ import com.qiukun.qiukunpicturebackend.exception.BusinessException;
 import com.qiukun.qiukunpicturebackend.exception.ErrorCode;
 import com.qiukun.qiukunpicturebackend.manager.CosManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletResponse;
 
 @RestController
 public class FileController {
@@ -59,6 +66,38 @@ public class FileController {
             }
         }
     }
+
+    /**
+     * 测试文件下载
+     *
+     * @param filepath 文件路径
+     * @param response 响应对象
+     */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @GetMapping("/test/download/")
+    public void testDownloadFile(String filepath, HttpServletResponse response) throws IOException {
+        COSObjectInputStream cosObjectInput = null;
+        try {
+            COSObject cosObject = cosManager.getObject(filepath);
+            cosObjectInput = cosObject.getObjectContent();
+            // 处理下载到的流
+            byte[] bytes = IOUtils.toByteArray(cosObjectInput);
+            // 设置响应头
+            response.setContentType("application/octet-stream;charset=UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=" + filepath);
+            // 写入响应
+            response.getOutputStream().write(bytes);
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            log.error("file download error, filepath = " + filepath, e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "下载失败");
+        } finally {
+            if (cosObjectInput != null) {
+                cosObjectInput.close();
+            }
+        }
+    }
+
 
 
 }
